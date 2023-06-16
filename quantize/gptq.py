@@ -42,9 +42,9 @@ class GPTQQuantizer:
         assert isinstance(linear_module, torch.nn.Linear)
 
         self.linear_module = linear_module
-        self.dev = self.linear_module.weight.device
         self.rows = linear_module.weight.shape[0]
         self.columns = linear_module.weight.shape[1]
+        self.dev = self.linear_module.weight.device
         self.H = torch.zeros((self.columns, self.columns), device=self.dev)
         self.nsamples = 0
         self.bits = bits
@@ -62,25 +62,20 @@ class GPTQQuantizer:
             device=self.dev,
         )
         self.zeros = torch.zeros_like(self.scales)
-        assert not (
-            self.actorder and self.groupsize != -1
+        assert (
+            not self.actorder or self.groupsize == -1
         ), "The permutation trick does not work for grouped quantization"
 
     @staticmethod
     def quantize_weight(x, scale, zero, maxq):
         q = torch.clamp(torch.round(x / scale) + zero, 0, maxq)
-        x_rec = scale * (q - zero)
-        return x_rec
+        return scale * (q - zero)
 
     def find_params_weight(self, x):
         dev = x.device
 
         shape = x.shape
-        if self.perchannel:
-            x = x.flatten(1)
-        else:
-            x = x.flatten().unsqueeze(0)
-
+        x = x.flatten(1) if self.perchannel else x.flatten().unsqueeze(0)
         tmp = torch.zeros(x.shape[0], device=dev)
         xmin = torch.minimum(x.min(1)[0], tmp)
         xmax = torch.maximum(x.max(1)[0], tmp)
@@ -216,9 +211,10 @@ def get_sample_data():
     traindata = load_dataset(
         "allenai/c4", "allenai--c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train"
     )
-    # heuristic for the data size?
-    txt = "\n".join(traindata[i]["text"] for i in torch.randperm(len(traindata))[:2000].tolist())
-    return txt
+    return "\n".join(
+        traindata[i]["text"]
+        for i in torch.randperm(len(traindata))[:2000].tolist()
+    )
 
 
 @torch.no_grad()
@@ -312,13 +308,7 @@ def llama_blockwise_quantization(model, sample_inputs, working_device, *, bits=4
     model.lm_head.to("cpu")
 
 
-def main(
-    *,
-    checkpoint_dir: Path = Path(f"checkpoints/stabilityai/stablelm-base-alpha-3b"),
-    output_path: Optional[Path] = None,
-    n_samples: int = 128,
-    precision: str = "bf16-true",
-) -> None:
+def main(*, checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"), output_path: Optional[Path] = None, n_samples: int = 128, precision: str = "bf16-true") -> None:
     """Generates text samples based on a pre-trained LLaMA model and tokenizer.
 
     Args:

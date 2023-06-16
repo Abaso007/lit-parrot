@@ -97,9 +97,7 @@ class Parrot(nn.Module):
 
         x = self.transformer.ln_f(x)
 
-        logits = self.lm_head(x)  # (b, t, vocab_size)
-
-        return logits
+        return self.lm_head(x)
 
     @classmethod
     def from_name(cls, name: str, **kwargs: Any) -> Self:

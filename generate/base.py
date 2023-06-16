@@ -90,19 +90,7 @@ def generate(
     return idx
 
 
-def main(
-    prompt: str = "Hello, my name is",
-    *,
-    num_samples: int = 1,
-    max_new_tokens: int = 50,
-    top_k: int = 200,
-    temperature: float = 0.8,
-    checkpoint_dir: Path = Path(f"checkpoints/stabilityai/stablelm-base-alpha-3b"),
-    quantize: Literal["llm.int8", "gptq.int4"] = None,
-    strategy: str = "auto",
-    devices: int = 1,
-    precision: str = "bf16-true",
-) -> None:
+def main(prompt: str = "Hello, my name is", *, num_samples: int = 1, max_new_tokens: int = 50, top_k: int = 200, temperature: float = 0.8, checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"), quantize: Literal["llm.int8", "gptq.int4"] = None, strategy: str = "auto", devices: int = 1, precision: str = "bf16-true") -> None:
     """Generates text samples based on a pre-trained model and tokenizer.
 
     Args:

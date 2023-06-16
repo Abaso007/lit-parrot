@@ -200,7 +200,7 @@ if triton is not None:
         # of fp32 values for higher accuracy.
         # `accumulator` will be converted back to fp16 after the loop
         accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
-        for k in range(0, K, BLOCK_SIZE_K):
+        for _ in range(0, K, BLOCK_SIZE_K):
             # wasteful as it is to load everything twice, my attempts at avoiding it lead to slower code
             b12 = tl.load(b_ptrs, mask=b_mask)
             # Note that for simplicity, we don't apply a mask in K here.
@@ -355,9 +355,9 @@ class GPTQQuantizer:
         assert isinstance(linear_module, torch.nn.Linear)
 
         self.linear_module = linear_module
-        self.dev = self.linear_module.weight.device
         self.rows = linear_module.weight.shape[0]
         self.columns = linear_module.weight.shape[1]
+        self.dev = self.linear_module.weight.device
         self.H = torch.zeros((self.columns, self.columns), device=self.dev)
         self.nsamples = 0
         self.bits = bits
@@ -375,25 +375,20 @@ class GPTQQuantizer:
             device=self.dev,
         )
         self.zeros = torch.zeros_like(self.scales)
-        assert not (
-            self.actorder and self.groupsize != -1
+        assert (
+            not self.actorder or self.groupsize == -1
         ), "The permutation trick does not work for grouped quantization"
 
     @staticmethod
     def quantize_weight(x, scale, zero, maxq):
         q = torch.clamp(torch.round(x / scale) + zero, 0, maxq)
-        x_rec = scale * (q - zero)
-        return x_rec
+        return scale * (q - zero)
 
     def find_params_weight(self, x):
         dev = x.device
 
         shape = x.shape
-        if self.perchannel:
-            x = x.flatten(1)
-        else:
-            x = x.flatten().unsqueeze(0)
-
+        x = x.flatten(1) if self.perchannel else x.flatten().unsqueeze(0)
         tmp = torch.zeros(x.shape[0], device=dev)
         xmin = torch.minimum(x.min(1)[0], tmp)
         xmax = torch.maximum(x.max(1)[0], tmp)

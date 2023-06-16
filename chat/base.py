@@ -95,14 +95,7 @@ def generate(
             yield_i += 1
 
 
-def main(
-    *,
-    top_k: int = 200,
-    temperature: float = 0.8,
-    checkpoint_dir: Path = Path(f"checkpoints/stabilityai/stablelm-tuned-alpha-3b"),
-    quantize: Literal["llm.int8", "gptq.int4"] = None,
-    precision: str = "bf16-true",
-) -> None:
+def main(*, top_k: int = 200, temperature: float = 0.8, checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-tuned-alpha-3b"), quantize: Literal["llm.int8", "gptq.int4"] = None, precision: str = "bf16-true") -> None:
     """Starts a conversation with a tuned Parrot model.
 
     Args:

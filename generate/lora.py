@@ -28,19 +28,7 @@ lora_alpha = 16
 lora_dropout = 0.05
 
 
-def main(
-    prompt: str = "What food do lamas eat?",
-    input: str = "",
-    lora_path: Path = Path("out/lora/alpaca/lit_model_lora_finetuned.pth"),
-    checkpoint_dir: Path = Path(f"checkpoints/stabilityai/stablelm-base-alpha-3b"),
-    quantize: Literal["llm.int8", "gptq.int4"] = None,
-    max_new_tokens: int = 100,
-    top_k: int = 200,
-    temperature: float = 0.8,
-    strategy: str = "auto",
-    devices: int = 1,
-    precision: str = "bf16-true",
-) -> None:
+def main(prompt: str = "What food do lamas eat?", input: str = "", lora_path: Path = Path("out/lora/alpaca/lit_model_lora_finetuned.pth"), checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"), quantize: Literal["llm.int8", "gptq.int4"] = None, max_new_tokens: int = 100, top_k: int = 200, temperature: float = 0.8, strategy: str = "auto", devices: int = 1, precision: str = "bf16-true") -> None:
     """Generates a response based on a given instruction and an optional input.
     This script will only work with checkpoints from the instruction-tuned Parrot-LoRA model.
     See `finetune/lora.py`.

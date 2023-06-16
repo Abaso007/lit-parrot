@@ -98,9 +98,9 @@ pythia = {
     # https://huggingface.co/EleutherAI/pythia-12b/blob/main/config.json
     "pythia-12b": dict(block_size=2048, n_layer=36, n_embd=5120, n_head=40, padding_multiple=512),
 }
-configs.update(pythia)
+configs |= pythia
 pythia_deduped = {f"{k}-deduped": pythia[k] for k in pythia}
-configs.update(pythia_deduped)
+configs |= pythia_deduped
 
 
 ####################################
