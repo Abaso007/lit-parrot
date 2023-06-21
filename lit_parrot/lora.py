@@ -295,38 +295,26 @@ class MergedLinear(nn.Linear, LoRALayer):
         def T(w):
             return w.T if self.fan_in_fan_out else w
 
-        # Let's assume that:
-        # ⚬ x: (64, 64, 128) or (batch_size, context_length, embedding_size)
-        # ⚬ self.weight: (384, 128) or (3 * embedding_size, embedding_size)
-        # ⚬ self.lora_A.data: (4, 128)
-        # ⚬ self.lora_B.data: (256, 2)
-
-        # the logic here is that the weights are merged only during inference
-        # so if they are merged we don't need to do anything with LoRA's A and B matrices
-        # but if the weights are not merged that means that the forward method is called during
-        # training and we need to forward pass input through pretrained weights, LoRA A and B matrices
-        # and do the summation (as per scheme at the top of the file)
         if self.merged:
             return F.linear(x, T(self.weight), bias=self.bias)
-        else:
-            # `F.linear` automatically transposes the second argument (T(self.weight) in our case)
-            result = F.linear(x, T(self.weight), bias=self.bias)  # (64, 64, 128) @ (384, 128) -> (64, 64, 384)
-            if self.r > 0:
-                after_A = F.linear(self.lora_dropout(x), self.lora_A)  # (64, 64, 128) @ (4, 128) -> (64, 64, 4)
-                # For F.conv1d:
-                # ⚬ input: input tensor of shape (mini-batch, in_channels, iW)
-                # ⚬ weight: filters of shape (out_channels, in_channels/groups, kW)
-                # ⚬ groups: split input into groups, in_channels should be divisible by the number of groups. Default: 1
-                # presumably iW - sequence width/length, kW - kernel width
-                after_B = F.conv1d(
-                    after_A.transpose(-2, -1),  # (64, 64, 4) -> (64, 4, 64)
-                    self.lora_B.unsqueeze(-1),  # (256, 2) -> (256, 2, 1)
-                    groups=sum(self.enable_lora),
-                ).transpose(
-                    -2, -1
-                )  # (64, 4, 64) @ (256, 2, 1) -> (64, 256, 64) -> (64, 64, 256)
-                result += self.zero_pad(after_B) * self.scaling  # (64, 64, 256) after zero_pad (64, 64, 384)
-            return result
+        # `F.linear` automatically transposes the second argument (T(self.weight) in our case)
+        result = F.linear(x, T(self.weight), bias=self.bias)  # (64, 64, 128) @ (384, 128) -> (64, 64, 384)
+        if self.r > 0:
+            after_A = F.linear(self.lora_dropout(x), self.lora_A)  # (64, 64, 128) @ (4, 128) -> (64, 64, 4)
+            # For F.conv1d:
+            # ⚬ input: input tensor of shape (mini-batch, in_channels, iW)
+            # ⚬ weight: filters of shape (out_channels, in_channels/groups, kW)
+            # ⚬ groups: split input into groups, in_channels should be divisible by the number of groups. Default: 1
+            # presumably iW - sequence width/length, kW - kernel width
+            after_B = F.conv1d(
+                after_A.transpose(-2, -1),  # (64, 64, 4) -> (64, 4, 64)
+                self.lora_B.unsqueeze(-1),  # (256, 2) -> (256, 2, 1)
+                groups=sum(self.enable_lora),
+            ).transpose(
+                -2, -1
+            )  # (64, 4, 64) @ (256, 2, 1) -> (64, 256, 64) -> (64, 64, 256)
+            result += self.zero_pad(after_B) * self.scaling  # (64, 64, 256) after zero_pad (64, 64, 384)
+        return result
 
 
 def mark_only_lora_as_trainable(model: nn.Module, bias: str = "none") -> None:
@@ -348,9 +336,7 @@ def mark_only_lora_as_trainable(model: nn.Module, bias: str = "none") -> None:
             p.requires_grad = False
 
     # depending on the `bias` value unfreeze bias weights
-    if bias == "none":
-        return
-    elif bias == "all":
+    if bias == "all":
         for n, p in model.named_parameters():
             if "bias" in n:
                 p.requires_grad = True
@@ -358,6 +344,8 @@ def mark_only_lora_as_trainable(model: nn.Module, bias: str = "none") -> None:
         for m in model.modules():
             if isinstance(m, LoRALayer) and hasattr(m, "bias") and m.bias is not None:
                 m.bias.requires_grad = True
+    elif bias == "none":
+        return
     else:
         raise NotImplementedError
 

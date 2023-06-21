@@ -10,10 +10,15 @@ from lit_parrot.adapter import Parrot
 
 
 def get_adapter_substrings():
-    substrings = ["adapter_wte", "gating_factor"]  # regular adapter v1 parameters
-    substrings.extend(["adapter_scale", "adapter_bias"])  # adapter v2: new bias and scale used in Linear
-    substrings.extend(["norm_1", "norm_2", "ln_f"])  # adapter v2: Norm parameters are now trainable
-    return substrings
+    return [
+        "adapter_wte",
+        "gating_factor",
+        "adapter_scale",
+        "adapter_bias",
+        "norm_1",
+        "norm_2",
+        "ln_f",
+    ]
 
 
 def mark_only_adapter_v2_as_trainable(model: Parrot) -> None:

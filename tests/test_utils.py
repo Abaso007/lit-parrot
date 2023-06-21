@@ -40,9 +40,8 @@ def test_lazy_load_subclass():
         sd = {1: t, 2: torch.nn.Parameter(t), 3: torch.Tensor._make_subclass(ATensor, t)}
         torch.save(sd, fn)
         with lit_parrot.utils.lazy_load(fn) as sd_lazy:
-            for k in sd.keys():
+            for k, expected in sd.items():
                 actual = sd_lazy[k]
-                expected = sd[k]
                 torch.testing.assert_close(actual._load_tensor(), expected)
 
 

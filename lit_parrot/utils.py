@@ -21,9 +21,7 @@ from torch.serialization import normalize_storage_type
 
 def find_multiple(n: int, k: int) -> int:
     assert k > 0
-    if n % k == 0:
-        return n
-    return n + k - (n % k)
+    return n if n % k == 0 else n + k - (n % k)
 
 
 def save_model_checkpoint(fabric, model, file_path):
@@ -140,17 +138,14 @@ class NotYetLoadedTensor:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             storage = torch.storage.TypedStorage(wrap_storage=uts, dtype=self.metatensor.dtype, _internal=True)
-        tensor = torch._utils._rebuild_tensor_v2(storage, *self.rebuild_args)
-        return tensor
+        return torch._utils._rebuild_tensor_v2(storage, *self.rebuild_args)
 
     @classmethod
     def __torch_function__(cls, func, types, args=(), kwargs=None):
         if kwargs is None:
             kwargs = {}
         loaded_args = [(a._load_tensor() if isinstance(a, NotYetLoadedTensor) else a) for a in args]
-        res = func(*loaded_args, **kwargs)
-        # gc.collect would be costly here, maybe do it optionally
-        return res
+        return func(*loaded_args, **kwargs)
 
     def __getattr__(self, name):
         # properties
@@ -244,7 +239,9 @@ def check_valid_checkpoint_dir(checkpoint_dir: Path) -> None:
     from lit_parrot.config import configs
 
     # list other possible checkpoints to download
-    not_downloaded = [c for c in configs if not any(c in str(a) for a in available)]
+    not_downloaded = [
+        c for c in configs if all(c not in str(a) for a in available)
+    ]
     joined = "\n * ".join([""] + not_downloaded)
     supported = f"You can download:{joined}"
 

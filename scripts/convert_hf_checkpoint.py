@@ -69,18 +69,18 @@ def copy_weights_falcon(size: Literal["7b", "40b"], state_dict, hf_weights, save
         "lm_head.weight": "lm_head.weight",
     }
     # the original model definition is different for each size
-    if size == "7b":
-        weight_map.update({
-            "transformer.h.{}.input_layernorm.bias": "transformer.h.{}.norm_1.bias",
-            "transformer.h.{}.input_layernorm.weight": "transformer.h.{}.norm_1.weight",
-        })
-    elif size == "40b":
-        weight_map.update({
+    if size == "40b":
+        weight_map |= {
             "transformer.h.{}.ln_attn.bias": "transformer.h.{}.norm_1.bias",
             "transformer.h.{}.ln_attn.weight": "transformer.h.{}.norm_1.weight",
             "transformer.h.{}.ln_mlp.bias": "transformer.h.{}.norm_2.bias",
             "transformer.h.{}.ln_mlp.weight": "transformer.h.{}.norm_2.weight",
-        })
+        }
+    elif size == "7b":
+        weight_map |= {
+            "transformer.h.{}.input_layernorm.bias": "transformer.h.{}.norm_1.bias",
+            "transformer.h.{}.input_layernorm.weight": "transformer.h.{}.norm_1.weight",
+        }
     else:
         raise NotImplementedError
 
@@ -140,7 +140,7 @@ def convert_hf_checkpoint(
     if pytorch_bin_map_json_path.is_file():  # not all checkpoints have this file
         with open(pytorch_bin_map_json_path) as json_map:
             bin_index = json.load(json_map)
-        bin_files = set(checkpoint_dir / bin for bin in bin_index["weight_map"].values())
+        bin_files = {checkpoint_dir / bin for bin in bin_index["weight_map"].values()}
     else:
         bin_files = set(checkpoint_dir.glob("*.bin"))
     if not bin_files:
